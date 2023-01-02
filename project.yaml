@@ -3,3 +3,13 @@
     - func/1.fc
   tests:
     - tests/1.fc
+2:
+  func:
+    - func/2.fc
+  tests:
+    - tests/2.fc
+3:
+  func:
+    - func/3.fc
+  tests:
+    - tests/3.fc

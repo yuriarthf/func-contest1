@@ -35,8 +35,8 @@ int equal_slices (slice a, slice b) asm "SDEQ";
   return (ds~load_msg_addr(), ds~load_msg_addr());
 }
 
-() save_data (slice manager_address, slice memorized_address) {
-  set_data(begin_cell().store_slice(owner_address).store_slice(memorized_address).end_cell());
+() save_data (slice manager_address, slice memorized_address) impure {
+  set_data(begin_cell().store_slice(manager_address).store_slice(memorized_address).end_cell());
 }
 
 ;; Parse sender address from incoming message
@@ -50,16 +50,21 @@ int equal_slices (slice a, slice b) asm "SDEQ";
 ;; testable
 () recv_internal (int balance, int msg_value, cell in_msg_full, slice in_msg_body) {
   (slice manager_address, slice memorized_address) = load_data();
-  int op = in_msg_body~load_int(32);
+  int op = in_msg_body~load_uint(32);
   int query_id = in_msg_body~load_uint(64);
   if (op == 1) {
-    save_data(manager, in_msg_body);
+    var (sender_address, _) = parse_sender_address(in_msg_full);
+    throw_unless(100, equal_slices(sender_address, manager_address));
+    slice address_to_memorize = in_msg_body~load_msg_addr();
+    throw_if(101, in_msg_body.slice_bits() > 0);
+    save_data(manager_address, address_to_memorize);
   }
   if (op == 2) {
+    throw_if(102, in_msg_body.slice_bits() > 0);
     var (sender_address, _) = parse_sender_address(in_msg_full);
     var msg = begin_cell()
           .store_uint(0x10, 6)
-          .store_slice(sender)
+          .store_slice(sender_address)
           .store_grams(0)
           .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
           .store_uint(3, 32)
@@ -67,7 +72,6 @@ int equal_slices (slice a, slice b) asm "SDEQ";
           .store_slice(manager_address)
           .store_slice(memorized_address)
         .end_cell();
-     send_raw_message(msg, 0x64);
-     save_data(manager_address, memorized_address);
+     send_raw_message(msg, 64);
   }
 }

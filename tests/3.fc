@@ -1,0 +1,203 @@
+slice get_address_none() asm "b{00} PUSHSLICE";
+
+slice format_internal_address(int address) inline {
+  return begin_cell()
+      .store_uint(2, 2)
+      .store_uint(0, 1)
+      .store_uint(0, 8)
+      .store_uint(address, 256)
+    .end_cell()
+    .begin_parse();
+}
+
+() set_initial_state(slice manager_address) impure {
+  set_data(begin_cell()
+      .store_slice(manager_address)
+      .store_slice(get_address_none())
+    .end_cell()
+  );
+}
+
+() set_state(slice manager_address, slice memorized_address) impure {
+  set_data(begin_cell()
+      .store_slice(manager_address)
+      .store_slice(memorized_address)
+    .end_cell()
+  );
+}
+
+int __test_op_1_success() {
+  slice manager_address = format_internal_address(0x1);
+  set_initial_state(manager_address);
+
+  slice memorized_address = format_internal_address(0x2);
+
+  cell in_msg_full = begin_cell()
+      .store_uint(0x4, 4)
+      .store_slice(manager_address)
+    .end_cell();
+
+  cell in_msg_body = begin_cell()
+      .store_uint(1, 32)
+      .store_uint(12345, 64)
+      .store_slice(memorized_address)
+    .end_cell();
+
+  var (int gas_used, _) = invoke_method(recv_internal, [
+    12345, 10, in_msg_full, in_msg_body.begin_parse()
+  ]);
+
+  slice cs = get_data().begin_parse();
+  throw_unless(100, equal_slices(cs~load_msg_addr(), manager_address));
+  throw_unless(101, equal_slices(cs~load_msg_addr(), memorized_address));
+
+  return gas_used;
+}
+
+int __test_op_1_sender_is_not_manager() {
+  slice manager_address = format_internal_address(0x1);
+  set_initial_state(manager_address);
+
+  slice memorized_address = format_internal_address(0x2);
+
+  cell in_msg_full = begin_cell()
+      .store_uint(0x4, 4)
+      .store_slice(memorized_address)
+    .end_cell();
+
+  cell in_msg_body = begin_cell()
+      .store_uint(1, 32)
+      .store_uint(12345, 64)
+      .store_slice(memorized_address)
+    .end_cell();
+
+  int gas_used = invoke_method_expect_fail(recv_internal, [
+    12345, 10, in_msg_full, in_msg_body.begin_parse()
+  ]);
+
+  return gas_used;
+}
+
+int __test_op_1_additionl_data() {
+  slice manager_address = format_internal_address(0x1);
+  set_initial_state(manager_address);
+
+  slice memorized_address = format_internal_address(0x2);
+
+  cell in_msg_full = begin_cell()
+      .store_uint(0x4, 4)
+      .store_slice(manager_address)
+    .end_cell();
+
+  cell in_msg_body = begin_cell()
+      .store_uint(1, 32)
+      .store_uint(12345, 64)
+      .store_slice(memorized_address)
+      .store_uint(1, 1)
+    .end_cell();
+
+  int gas_used = invoke_method_expect_fail(recv_internal, [
+    12345, 10, in_msg_full, in_msg_body.begin_parse()
+  ]);
+
+  return gas_used;
+}
+
+int __test_op_2_without_memorized_address() {
+  slice manager_address = format_internal_address(0x1);
+  set_initial_state(manager_address);
+
+  slice sender_address = format_internal_address(0x2);
+
+  cell in_msg_full = begin_cell()
+      .store_uint(0x4, 4)
+      .store_slice(sender_address)
+    .end_cell();
+
+  cell in_msg_body = begin_cell()
+      .store_uint(2, 32)
+      .store_uint(12345, 64)
+    .end_cell();
+
+  var (int gas_used, _) = invoke_method(recv_internal, [
+    12345, 10, in_msg_full, in_msg_body.begin_parse()
+  ]);
+
+  return gas_used;
+}
+
+int __test_op_2_with_memorized_address() {
+  slice manager_address = format_internal_address(0x1);
+  slice memorized_address = format_internal_address(0x2);
+  set_state(manager_address,memorized_address);
+
+  slice sender_address = format_internal_address(0x3);
+
+  cell in_msg_full = begin_cell()
+      .store_uint(0x4, 4)
+      .store_slice(sender_address)
+    .end_cell();
+
+  cell in_msg_body = begin_cell()
+      .store_uint(2, 32)
+      .store_uint(12345, 64)
+    .end_cell();
+
+  var (int gas_used, _) = invoke_method(recv_internal, [
+    12345, 10, in_msg_full, in_msg_body.begin_parse()
+  ]);
+
+  slice actions = get_actions();
+  actions~load_ref();
+
+  throw_unless(100, actions~load_uint(32) == 0x0ec3c86d);
+  throw_unless(101, actions~load_uint(8) == 64);
+
+  slice out_msg = (actions~load_ref()).begin_parse();
+  out_msg~skip_bits(6);
+
+  slice dst = out_msg~load_msg_addr();
+  throw_unless(102, equal_slices(dst, sender_address));
+  out_msg~load_grams();
+  out_msg~skip_bits(1 + 4 + 4 + 64 + 32 + 1 + 1);
+
+  int op = out_msg~load_uint(32);
+  throw_unless(102, op == 3);
+
+  int query_id = out_msg~load_uint(64);
+  throw_unless(103, query_id == 12345);
+
+  throw_unless(104, equal_slices(out_msg~load_msg_addr(), manager_address));
+  throw_unless(105, equal_slices(out_msg~load_msg_addr(), memorized_address));
+
+  slice cs = get_data().begin_parse();
+  throw_unless(106, equal_slices(cs~load_msg_addr(), manager_address));
+  throw_unless(107, equal_slices(cs~load_msg_addr(), memorized_address));
+
+  return gas_used;
+}
+
+int __test_op_2_additional_msg_body_bits() {
+  slice manager_address = format_internal_address(0x1);
+  slice memorized_address = format_internal_address(0x2);
+  set_state(manager_address,memorized_address);
+
+  slice sender_address = format_internal_address(0x3);
+
+  cell in_msg_full = begin_cell()
+      .store_uint(0x4, 4)
+      .store_slice(sender_address)
+    .end_cell();
+
+  cell in_msg_body = begin_cell()
+      .store_uint(2, 32)
+      .store_uint(12345, 64)
+      .store_uint(1, 1)
+    .end_cell();
+
+  int gas_used = invoke_method_expect_fail(recv_internal, [
+    12345, 10, in_msg_full, in_msg_body.begin_parse()
+  ]);
+
+  return gas_used;
+}

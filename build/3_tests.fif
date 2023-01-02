@@ -1,5 +1,5 @@
 "Asm.fif" include
-// automatically generated from `/home/yuriarthf/.config/toncli/func-libs/error_codes.func` `/home/yuriarthf/.config/toncli/func-libs/math.func` `/home/yuriarthf/.config/toncli/func-libs/stdlib.func` `/home/yuriarthf/.config/toncli/test-libs/1.address_helpers.func` `/home/yuriarthf/.config/toncli/test-libs/token-helpers.func` `/home/yuriarthf/.config/toncli/test-libs/c5_parse_helpers.func` `/home/yuriarthf/.config/toncli/test-libs/message_helpers.func` `/home/yuriarthf/.config/toncli/test-libs/bad_messages_generator.func` `/home/yuriarthf/.config/toncli/test-libs/tests-helpers.func` `/home/yuriarthf/.config/toncli/test-libs/storage-test-helpers.func` `/mnt/c/Users/yuria/learning/TON/func-contest1/func/2.fc` `/mnt/c/Users/yuria/learning/TON/func-contest1/tests/2.fc` 
+// automatically generated from `/home/yuriarthf/.config/toncli/func-libs/error_codes.func` `/home/yuriarthf/.config/toncli/func-libs/math.func` `/home/yuriarthf/.config/toncli/func-libs/stdlib.func` `/home/yuriarthf/.config/toncli/test-libs/1.address_helpers.func` `/home/yuriarthf/.config/toncli/test-libs/token-helpers.func` `/home/yuriarthf/.config/toncli/test-libs/c5_parse_helpers.func` `/home/yuriarthf/.config/toncli/test-libs/message_helpers.func` `/home/yuriarthf/.config/toncli/test-libs/bad_messages_generator.func` `/home/yuriarthf/.config/toncli/test-libs/tests-helpers.func` `/home/yuriarthf/.config/toncli/test-libs/storage-test-helpers.func` `/mnt/c/Users/yuria/learning/TON/func-contest1/func/3.fc` `/mnt/c/Users/yuria/learning/TON/func-contest1/tests/3.fc` 
 PROGRAM{
   DECLPROC power
   DECLPROC sqrt
@@ -62,11 +62,18 @@ PROGRAM{
   68533 DECLMETHOD load_storage_with_tag
   113134 DECLMETHOD save_storage_with_tag
   DECLPROC load_data
+  DECLPROC save_data
   DECLPROC parse_sender_address
   DECLPROC recv_internal
-  DECLPROC get_owner_addr
-  DECLPROC set_owner_addr
-  DECLPROC __test_fwd_message
+  DECLPROC format_internal_address
+  DECLPROC set_initial_state
+  DECLPROC set_state
+  DECLPROC __test_op_1_success
+  DECLPROC __test_op_1_sender_is_not_manager
+  DECLPROC __test_op_1_additionl_data
+  DECLPROC __test_op_2_without_memorized_address
+  DECLPROC __test_op_2_with_memorized_address
+  DECLPROC __test_op_2_additional_msg_body_bits
   power PROCREF:<{
     //  x exponent
     OVER	//  x exponent x
@@ -2013,8 +2020,19 @@ PROGRAM{
     // 
     c4 PUSH	//  _1
     CTOS	//  ds
-    LDMSGADDR	//  _6 _5
-    DROP	//  _3
+    LDMSGADDR	//  _3 ds
+    LDMSGADDR	//  _3 _10 _9
+    DROP	//  _3 _5
+  }>
+  save_data PROC:<{
+    //  manager_address memorized_address
+    NEWC
+    ROT	//  memorized_address _2 manager_address
+    STSLICER	//  memorized_address _3
+    SWAP	//  _3 memorized_address
+    STSLICER	//  _4
+    ENDC	//  _5
+    c4 POP
   }>
   parse_sender_address PROC:<{
     //  in_msg_full
@@ -2026,117 +2044,369 @@ PROGRAM{
   }>
   recv_internal PROC:<{
     //  balance msg_value in_msg_full in_msg_body
-    s3 POP
-    NIP	//  in_msg_body in_msg_full
-    parse_sender_address CALLDICT	//  in_msg_body _40 _41
-    DROP	//  in_msg_body sender_address
-    load_data CALLDICT	//  in_msg_body sender_address owner_address
-    NEWC	//  in_msg_body sender_address owner_address _10
-    s0 s3 XCHG2	//  owner_address sender_address _10 in_msg_body
-    STSLICER	//  owner_address sender_address _11
-    ENDC	//  owner_address sender_address _12
-    0 PUSHINT	//  owner_address sender_address _12 _13=0
-    16 PUSHINT	//  owner_address sender_address _12 _13=0 _14=16
-    NEWC	//  owner_address sender_address _12 _13=0 _14=16 _15
-    6 STU	//  owner_address sender_address _12 _13=0 _17
-    s0 s4 XCHG2	//  _13=0 sender_address _12 _17 owner_address
-    STSLICER	//  _13=0 sender_address _12 _18
-    s3 PUSH	//  _13=0 sender_address _12 _18 _19=0
-    STGRAMS	//  _13=0 sender_address _12 _20
-    s1 s3 XCHG	//  _12 sender_address _13=0 _20
-    107 STU	//  _12 sender_address _34
-    SWAP	//  _12 _34 sender_address
-    STSLICER	//  _12 _35
-    STREF	//  _36
-    ENDC	//  msg
-    64 PUSHINT	//  msg _38=64
-    SENDRAWMSG
+    2 2 BLKDROP2	//  in_msg_full in_msg_body
+    load_data CALLDICT	//  in_msg_full in_msg_body manager_address memorized_address
+    s0 s2 XCHG	//  in_msg_full memorized_address manager_address in_msg_body
+    32 LDU	//  in_msg_full memorized_address manager_address op in_msg_body
+    64 LDU	//  in_msg_full memorized_address manager_address op query_id in_msg_body
+    s2 PUSH	//  in_msg_full memorized_address manager_address op query_id in_msg_body op
+    1 EQINT	//  in_msg_full memorized_address manager_address op query_id in_msg_body _16
+    IF:<{	//  in_msg_full memorized_address manager_address op query_id in_msg_body
+      s5 PUSH	//  in_msg_full memorized_address manager_address op query_id in_msg_body in_msg_full
+      parse_sender_address CALLDICT	//  in_msg_full memorized_address manager_address op query_id in_msg_body _81 _82
+      DROP	//  in_msg_full memorized_address manager_address op query_id in_msg_body sender_address
+      s4 PUSH	//  in_msg_full memorized_address manager_address op query_id in_msg_body sender_address manager_address
+      SDEQ	//  in_msg_full memorized_address manager_address op query_id in_msg_body _21
+      100 THROWIFNOT
+      LDMSGADDR	//  in_msg_full memorized_address manager_address op query_id address_to_memorize in_msg_body
+      DUP	//  in_msg_full memorized_address manager_address op query_id address_to_memorize in_msg_body in_msg_body
+      SBITS	//  in_msg_full memorized_address manager_address op query_id address_to_memorize in_msg_body _27
+      0 GTINT	//  in_msg_full memorized_address manager_address op query_id address_to_memorize in_msg_body _29
+      101 THROWIF
+      s4 s1 PUXC	//  in_msg_full memorized_address manager_address op query_id in_msg_body manager_address address_to_memorize
+      save_data CALLDICT
+    }>	//  in_msg_full memorized_address manager_address op query_id in_msg_body
+    s0 s2 XCHG	//  in_msg_full memorized_address manager_address in_msg_body query_id op
+    2 EQINT	//  in_msg_full memorized_address manager_address in_msg_body query_id _33
+    IF:<{	//  in_msg_full memorized_address manager_address in_msg_body query_id
+      SWAP	//  in_msg_full memorized_address manager_address query_id in_msg_body
+      SBITS	//  in_msg_full memorized_address manager_address query_id _35
+      0 GTINT	//  in_msg_full memorized_address manager_address query_id _37
+      102 THROWIF
+      s0 s3 XCHG	//  query_id memorized_address manager_address in_msg_full
+      parse_sender_address CALLDICT	//  query_id memorized_address manager_address _85 _86
+      DROP	//  query_id memorized_address manager_address sender_address
+      3 PUSHINT	//  query_id memorized_address manager_address sender_address _43=3
+      0 PUSHINT	//  query_id memorized_address manager_address sender_address _43=3 _44=0
+      16 PUSHINT	//  query_id memorized_address manager_address sender_address _43=3 _44=0 _45=16
+      NEWC	//  query_id memorized_address manager_address sender_address _43=3 _44=0 _45=16 _46
+      6 STU	//  query_id memorized_address manager_address sender_address _43=3 _44=0 _48
+      s0 s3 XCHG2	//  query_id memorized_address manager_address _44=0 _43=3 _48 sender_address
+      STSLICER	//  query_id memorized_address manager_address _44=0 _43=3 _49
+      s2 PUSH	//  query_id memorized_address manager_address _44=0 _43=3 _49 _50=0
+      STGRAMS	//  query_id memorized_address manager_address _44=0 _43=3 _51
+      s1 s2 XCHG	//  query_id memorized_address manager_address _43=3 _44=0 _51
+      107 STU	//  query_id memorized_address manager_address _43=3 _65
+      32 STU	//  query_id memorized_address manager_address _67
+      s1 s3 XCHG	//  manager_address memorized_address query_id _67
+      64 STU	//  manager_address memorized_address _69
+      ROT	//  memorized_address _69 manager_address
+      STSLICER	//  memorized_address _70
+      SWAP	//  _70 memorized_address
+      STSLICER	//  _71
+      ENDC	//  msg
+      64 PUSHINT	//  msg _73=64
+      SENDRAWMSG
+    }>ELSE<{
+      5 BLKDROP	// 
+    }>
   }>
-  get_owner_addr PROCINLINE:<{
-    // 
-    1 PUSHINT	//  _0=1
-    0 PUSHINT	//  _0=1 _1=0
-    DUP	//  _0=1 _1=0 _2=0
-    2 PUSHINT	//  _0=1 _1=0 _2=0 _3=2
-    NEWC	//  _0=1 _1=0 _2=0 _3=2 _4
-    2 STU	//  _0=1 _1=0 _2=0 _6
-    1 STU	//  _0=1 _1=0 _8
-    8 STU	//  _0=1 _10
+  format_internal_address PROCINLINE:<{
+    //  address
+    0 PUSHINT	//  address _1=0
+    DUP	//  address _1=0 _2=0
+    2 PUSHINT	//  address _1=0 _2=0 _3=2
+    NEWC	//  address _1=0 _2=0 _3=2 _4
+    2 STU	//  address _1=0 _2=0 _6
+    1 STU	//  address _1=0 _8
+    8 STU	//  address _10
     256 STU	//  _12
     ENDC	//  _13
     CTOS	//  _14
   }>
-  set_owner_addr PROC:<{
-    //  owner_addr
-    NEWC	//  owner_addr _1
-    SWAP	//  _1 owner_addr
+  set_initial_state PROC:<{
+    //  manager_address
+    NEWC	//  manager_address _1
+    SWAP	//  _1 manager_address
     STSLICER	//  _2
-    ENDC	//  _3
+    b{00} PUSHSLICE	//  _2 _3
+    STSLICER	//  _4
+    ENDC	//  _5
     c4 POP
   }>
-  __test_fwd_message PROC:<{
+  set_state PROC:<{
+    //  manager_address memorized_address
+    NEWC
+    ROT	//  memorized_address _2 manager_address
+    STSLICER	//  memorized_address _3
+    SWAP	//  _3 memorized_address
+    STSLICER	//  _4
+    ENDC	//  _5
+    c4 POP
+  }>
+  __test_op_1_success PROC:<{
     // 
-    get_owner_addr INLINECALLDICT	//  owner_addr
-    get_owner_addr INLINECALLDICT	//  owner_addr sender_addr
-    OVER	//  owner_addr sender_addr owner_addr
-    set_owner_addr CALLDICT
-    10 PUSHINT	//  owner_addr sender_addr _6=10
-    NEWC	//  owner_addr sender_addr _6=10 _7
-    4 STU	//  owner_addr sender_addr _9
-    ENDC	//  owner_addr sender_addr in_msg_body
-    6 PUSHINT	//  owner_addr sender_addr in_msg_body _12=6
-    NEWC	//  owner_addr sender_addr in_msg_body _12=6 _13
-    4 STU	//  owner_addr sender_addr in_msg_body _15
-    ROT	//  owner_addr in_msg_body _15 sender_addr
-    STSLICER	//  owner_addr in_msg_body _16
-    ENDC	//  owner_addr in_msg_body in_msg_full
+    1 PUSHINT	//  _1=1
+    format_internal_address INLINECALLDICT	//  manager_address
+    DUP	//  manager_address manager_address
+    set_initial_state CALLDICT
+    2 PUSHINT	//  manager_address _5=2
+    format_internal_address INLINECALLDICT	//  manager_address memorized_address
+    4 PUSHINT	//  manager_address memorized_address _8=4
+    NEWC	//  manager_address memorized_address _8=4 _9
+    4 STU	//  manager_address memorized_address _11
+    s2 PUSH	//  manager_address memorized_address _11 manager_address
+    STSLICER	//  manager_address memorized_address _12
+    ENDC	//  manager_address memorized_address in_msg_full
+    12345 PUSHINT	//  manager_address memorized_address in_msg_full _15=12345
+    1 PUSHINT	//  manager_address memorized_address in_msg_full _15=12345 _16=1
+    NEWC	//  manager_address memorized_address in_msg_full _15=12345 _16=1 _17
+    32 STU	//  manager_address memorized_address in_msg_full _15=12345 _19
+    64 STU	//  manager_address memorized_address in_msg_full _21
+    s2 PUSH	//  manager_address memorized_address in_msg_full _21 memorized_address
+    STSLICER	//  manager_address memorized_address in_msg_full _22
+    ENDC	//  manager_address memorized_address in_msg_full in_msg_body
     CONT:<{
       recv_internal CALLDICT
-    }>	//  owner_addr in_msg_body in_msg_full _20
-    12345 PUSHINT	//  owner_addr in_msg_body in_msg_full _20 _22=12345
-    10 PUSHINT	//  owner_addr in_msg_body in_msg_full _20 _22=12345 _23=10
-    s0 s4 XCHG	//  owner_addr _23=10 in_msg_full _20 _22=12345 in_msg_body
-    CTOS	//  owner_addr _23=10 in_msg_full _20 _22=12345 _24
-    s4 s3 s0 XCHG3	//  owner_addr _20 _22=12345 _23=10 in_msg_full _24
-    4 TUPLE	//  owner_addr _20 _21
-    invoke_method CALLDICT	//  owner_addr _95 _96
-    DROP	//  owner_addr gas_used
-    c5 PUSH CTOS	//  owner_addr gas_used actions
-    LDREF	//  owner_addr gas_used _98 _97
-    NIP	//  owner_addr gas_used actions
-    32 LDU	//  owner_addr gas_used prefix actions
-    SWAP
-    247711853 PUSHINT	//  owner_addr gas_used actions prefix _35=247711853
-    EQUAL	//  owner_addr gas_used actions _36
+    }>	//  manager_address memorized_address in_msg_full in_msg_body _26
+    12345 PUSHINT	//  manager_address memorized_address in_msg_full in_msg_body _26 _28=12345
+    10 PUSHINT	//  manager_address memorized_address in_msg_full in_msg_body _26 _28=12345 _29=10
+    s0 s3 XCHG	//  manager_address memorized_address in_msg_full _29=10 _26 _28=12345 in_msg_body
+    CTOS	//  manager_address memorized_address in_msg_full _29=10 _26 _28=12345 _30
+    s3 s3 s0 XCHG3
+    s1 s4 XCHG	//  manager_address memorized_address _26 _28=12345 _29=10 in_msg_full _30
+    4 TUPLE	//  manager_address memorized_address _26 _27
+    invoke_method CALLDICT	//  manager_address memorized_address _45 _46
+    DROP	//  manager_address memorized_address gas_used
+    c4 PUSH	//  manager_address memorized_address gas_used _33
+    CTOS	//  manager_address memorized_address gas_used cs
+    LDMSGADDR	//  manager_address memorized_address gas_used _36 cs
+    s0 s4 XCHG	//  cs memorized_address gas_used _36 manager_address
+    SDEQ	//  cs memorized_address gas_used _38
     100 THROWIFNOT
-    8 LDU	//  owner_addr gas_used flag actions
-    SWAP	//  owner_addr gas_used actions flag
-    64 EQINT	//  owner_addr gas_used actions _44
+    s0 s2 XCHG	//  gas_used memorized_address cs
+    LDMSGADDR	//  gas_used memorized_address _50 _49
+    DROP	//  gas_used memorized_address _41
+    SWAP	//  gas_used _41 memorized_address
+    SDEQ	//  gas_used _43
     101 THROWIFNOT
-    LDREF	//  owner_addr gas_used _104 _103
-    DROP	//  owner_addr gas_used msg
-    CTOS	//  owner_addr gas_used cs
-    6 PUSHINT	//  owner_addr gas_used cs _52=6
-    SDSKIPFIRST	//  owner_addr gas_used cs
-    LDMSGADDR	//  owner_addr gas_used dest_addr cs
-    s0 s3 XCHG	//  cs gas_used dest_addr owner_addr
-    SDEQ	//  cs gas_used _58
+  }>
+  __test_op_1_sender_is_not_manager PROC:<{
+    // 
+    1 PUSHINT	//  _1=1
+    format_internal_address INLINECALLDICT	//  manager_address
+    set_initial_state CALLDICT
+    2 PUSHINT	//  _5=2
+    format_internal_address INLINECALLDICT	//  memorized_address
+    4 PUSHINT	//  memorized_address _8=4
+    NEWC	//  memorized_address _8=4 _9
+    4 STU	//  memorized_address _11
+    OVER	//  memorized_address _11 memorized_address
+    STSLICER	//  memorized_address _12
+    ENDC	//  memorized_address in_msg_full
+    12345 PUSHINT	//  memorized_address in_msg_full _15=12345
+    1 PUSHINT	//  memorized_address in_msg_full _15=12345 _16=1
+    NEWC	//  memorized_address in_msg_full _15=12345 _16=1 _17
+    32 STU	//  memorized_address in_msg_full _15=12345 _19
+    64 STU	//  memorized_address in_msg_full _21
+    ROT	//  in_msg_full _21 memorized_address
+    STSLICER	//  in_msg_full _22
+    ENDC	//  in_msg_full in_msg_body
+    CONT:<{
+      recv_internal CALLDICT
+    }>	//  in_msg_full in_msg_body _25
+    12345 PUSHINT	//  in_msg_full in_msg_body _25 _27=12345
+    10 PUSHINT	//  in_msg_full in_msg_body _25 _27=12345 _28=10
+    s0 s3 XCHG	//  in_msg_full _28=10 _25 _27=12345 in_msg_body
+    CTOS	//  in_msg_full _28=10 _25 _27=12345 _29
+    s3 s3 s0 XCHG3
+    s1 s4 XCHG	//  _25 _27=12345 _28=10 in_msg_full _29
+    4 TUPLE	//  _25 _26
+    invoke_method_expect_fail CALLDICT	//  gas_used
+  }>
+  __test_op_1_additionl_data PROC:<{
+    // 
+    1 PUSHINT	//  _1=1
+    format_internal_address INLINECALLDICT	//  manager_address
+    DUP	//  manager_address manager_address
+    set_initial_state CALLDICT
+    2 PUSHINT	//  manager_address _5=2
+    format_internal_address INLINECALLDICT	//  manager_address memorized_address
+    4 PUSHINT	//  manager_address memorized_address _8=4
+    NEWC	//  manager_address memorized_address _8=4 _9
+    4 STU	//  manager_address memorized_address _11
+    ROT	//  memorized_address _11 manager_address
+    STSLICER	//  memorized_address _12
+    ENDC	//  memorized_address in_msg_full
+    1 PUSHINT	//  memorized_address in_msg_full _15=1
+    12345 PUSHINT	//  memorized_address in_msg_full _15=1 _16=12345
+    OVER	//  memorized_address in_msg_full _15=1 _16=12345 _17=1
+    NEWC	//  memorized_address in_msg_full _15=1 _16=12345 _17=1 _18
+    32 STU	//  memorized_address in_msg_full _15=1 _16=12345 _20
+    64 STU	//  memorized_address in_msg_full _15=1 _22
+    s0 s3 XCHG2	//  _15=1 in_msg_full _22 memorized_address
+    STSLICER	//  _15=1 in_msg_full _23
+    s1 s2 XCHG	//  in_msg_full _15=1 _23
+    1 STU	//  in_msg_full _25
+    ENDC	//  in_msg_full in_msg_body
+    CONT:<{
+      recv_internal CALLDICT
+    }>	//  in_msg_full in_msg_body _28
+    12345 PUSHINT	//  in_msg_full in_msg_body _28 _30=12345
+    10 PUSHINT	//  in_msg_full in_msg_body _28 _30=12345 _31=10
+    s0 s3 XCHG	//  in_msg_full _31=10 _28 _30=12345 in_msg_body
+    CTOS	//  in_msg_full _31=10 _28 _30=12345 _32
+    s3 s3 s0 XCHG3
+    s1 s4 XCHG	//  _28 _30=12345 _31=10 in_msg_full _32
+    4 TUPLE	//  _28 _29
+    invoke_method_expect_fail CALLDICT	//  gas_used
+  }>
+  __test_op_2_without_memorized_address PROC:<{
+    // 
+    1 PUSHINT	//  _1=1
+    format_internal_address INLINECALLDICT	//  manager_address
+    set_initial_state CALLDICT
+    2 PUSHINT	//  _5=2
+    format_internal_address INLINECALLDICT	//  sender_address
+    4 PUSHINT	//  sender_address _8=4
+    NEWC	//  sender_address _8=4 _9
+    4 STU	//  sender_address _11
+    SWAP	//  _11 sender_address
+    STSLICER	//  _12
+    ENDC	//  in_msg_full
+    12345 PUSHINT	//  in_msg_full _15=12345
+    2 PUSHINT	//  in_msg_full _15=12345 _16=2
+    NEWC	//  in_msg_full _15=12345 _16=2 _17
+    32 STU	//  in_msg_full _15=12345 _19
+    64 STU	//  in_msg_full _21
+    ENDC	//  in_msg_full in_msg_body
+    CONT:<{
+      recv_internal CALLDICT
+    }>	//  in_msg_full in_msg_body _25
+    12345 PUSHINT	//  in_msg_full in_msg_body _25 _27=12345
+    10 PUSHINT	//  in_msg_full in_msg_body _25 _27=12345 _28=10
+    s0 s3 XCHG	//  in_msg_full _28=10 _25 _27=12345 in_msg_body
+    CTOS	//  in_msg_full _28=10 _25 _27=12345 _29
+    s3 s3 s0 XCHG3
+    s1 s4 XCHG	//  _25 _27=12345 _28=10 in_msg_full _29
+    4 TUPLE	//  _25 _26
+    invoke_method CALLDICT	//  _31 _32
+    DROP	//  gas_used
+  }>
+  __test_op_2_with_memorized_address PROC:<{
+    // 
+    1 PUSHINT	//  _1=1
+    format_internal_address INLINECALLDICT	//  manager_address
+    2 PUSHINT	//  manager_address _4=2
+    format_internal_address INLINECALLDICT	//  manager_address memorized_address
+    2DUP	//  manager_address memorized_address manager_address memorized_address
+    set_state CALLDICT
+    3 PUSHINT	//  manager_address memorized_address _8=3
+    format_internal_address INLINECALLDICT	//  manager_address memorized_address sender_address
+    4 PUSHINT	//  manager_address memorized_address sender_address _11=4
+    NEWC	//  manager_address memorized_address sender_address _11=4 _12
+    4 STU	//  manager_address memorized_address sender_address _14
+    OVER	//  manager_address memorized_address sender_address _14 sender_address
+    STSLICER	//  manager_address memorized_address sender_address _15
+    ENDC	//  manager_address memorized_address sender_address in_msg_full
+    12345 PUSHINT	//  manager_address memorized_address sender_address in_msg_full _18=12345
+    2 PUSHINT	//  manager_address memorized_address sender_address in_msg_full _18=12345 _19=2
+    NEWC	//  manager_address memorized_address sender_address in_msg_full _18=12345 _19=2 _20
+    32 STU	//  manager_address memorized_address sender_address in_msg_full _18=12345 _22
+    64 STU	//  manager_address memorized_address sender_address in_msg_full _24
+    ENDC	//  manager_address memorized_address sender_address in_msg_full in_msg_body
+    CONT:<{
+      recv_internal CALLDICT
+    }>	//  manager_address memorized_address sender_address in_msg_full in_msg_body _28
+    12345 PUSHINT	//  manager_address memorized_address sender_address in_msg_full in_msg_body _28 _30=12345
+    10 PUSHINT	//  manager_address memorized_address sender_address in_msg_full in_msg_body _28 _30=12345 _31=10
+    s0 s3 XCHG	//  manager_address memorized_address sender_address in_msg_full _31=10 _28 _30=12345 in_msg_body
+    CTOS	//  manager_address memorized_address sender_address in_msg_full _31=10 _28 _30=12345 _32
+    s3 s3 s0 XCHG3
+    s1 s4 XCHG	//  manager_address memorized_address sender_address _28 _30=12345 _31=10 in_msg_full _32
+    4 TUPLE	//  manager_address memorized_address sender_address _28 _29
+    invoke_method CALLDICT	//  manager_address memorized_address sender_address _121 _122
+    DROP	//  manager_address memorized_address sender_address gas_used
+    c5 PUSH CTOS	//  manager_address memorized_address sender_address gas_used actions
+    LDREF	//  manager_address memorized_address sender_address gas_used _124 _123
+    NIP	//  manager_address memorized_address sender_address gas_used actions
+    32 LDU	//  manager_address memorized_address sender_address gas_used _39 actions
+    SWAP
+    247711853 PUSHINT	//  manager_address memorized_address sender_address gas_used actions _39 _42=247711853
+    EQUAL	//  manager_address memorized_address sender_address gas_used actions _43
+    100 THROWIFNOT
+    8 LDU	//  manager_address memorized_address sender_address gas_used _46 actions
+    SWAP	//  manager_address memorized_address sender_address gas_used actions _46
+    64 EQINT	//  manager_address memorized_address sender_address gas_used actions _50
+    101 THROWIFNOT
+    LDREF	//  manager_address memorized_address sender_address gas_used _130 _129
+    DROP	//  manager_address memorized_address sender_address gas_used _53
+    CTOS	//  manager_address memorized_address sender_address gas_used out_msg
+    6 PUSHINT	//  manager_address memorized_address sender_address gas_used out_msg _57=6
+    SDSKIPFIRST	//  manager_address memorized_address sender_address gas_used out_msg
+    LDMSGADDR	//  manager_address memorized_address sender_address gas_used dst out_msg
+    s0 s3 XCHG	//  manager_address memorized_address out_msg gas_used dst sender_address
+    SDEQ	//  manager_address memorized_address out_msg gas_used _63
     102 THROWIFNOT
-    SWAP	//  gas_used cs
-    LDGRAMS	//  gas_used _108 _107
-    NIP	//  gas_used cs
-    107 PUSHINT	//  gas_used cs _75
-    SDSKIPFIRST	//  gas_used cs
-    LDMSGADDR	//  gas_used sender_addr cs
-    s1 s0 XCPU	//  gas_used cs sender_addr sender_addr
-    SDEQ	//  gas_used cs _81
+    SWAP	//  manager_address memorized_address gas_used out_msg
+    LDGRAMS	//  manager_address memorized_address gas_used _134 _133
+    NIP	//  manager_address memorized_address gas_used out_msg
+    107 PUSHINT	//  manager_address memorized_address gas_used out_msg _80
+    SDSKIPFIRST	//  manager_address memorized_address gas_used out_msg
+    32 LDU	//  manager_address memorized_address gas_used op out_msg
+    SWAP	//  manager_address memorized_address gas_used out_msg op
+    3 EQINT	//  manager_address memorized_address gas_used out_msg _88
+    102 THROWIFNOT
+    64 LDU	//  manager_address memorized_address gas_used query_id out_msg
+    SWAP
+    12345 PUSHINT	//  manager_address memorized_address gas_used out_msg query_id _95=12345
+    EQUAL	//  manager_address memorized_address gas_used out_msg _96
     103 THROWIFNOT
-    LDREF	//  gas_used _112 _111
-    DROP	//  gas_used _84
-    CTOS	//  gas_used fwd_msg_body
-    4 LDU	//  gas_used _114 _113
-    DROP	//  gas_used fwd_msg_value
-    10 EQINT	//  gas_used _93
+    LDMSGADDR	//  manager_address memorized_address gas_used _99 out_msg
+    s1 s4 XCPU	//  manager_address memorized_address gas_used out_msg _99 manager_address
+    SDEQ	//  manager_address memorized_address gas_used out_msg _101
     104 THROWIFNOT
+    LDMSGADDR	//  manager_address memorized_address gas_used _142 _141
+    DROP	//  manager_address memorized_address gas_used _104
+    s2 PUSH	//  manager_address memorized_address gas_used _104 memorized_address
+    SDEQ	//  manager_address memorized_address gas_used _106
+    105 THROWIFNOT
+    c4 PUSH	//  manager_address memorized_address gas_used _109
+    CTOS	//  manager_address memorized_address gas_used cs
+    LDMSGADDR	//  manager_address memorized_address gas_used _112 cs
+    s0 s4 XCHG	//  cs memorized_address gas_used _112 manager_address
+    SDEQ	//  cs memorized_address gas_used _114
+    106 THROWIFNOT
+    s0 s2 XCHG	//  gas_used memorized_address cs
+    LDMSGADDR	//  gas_used memorized_address _146 _145
+    DROP	//  gas_used memorized_address _117
+    SWAP	//  gas_used _117 memorized_address
+    SDEQ	//  gas_used _119
+    107 THROWIFNOT
+  }>
+  __test_op_2_additional_msg_body_bits PROC:<{
+    // 
+    1 PUSHINT	//  _1=1
+    format_internal_address INLINECALLDICT	//  manager_address
+    2 PUSHINT	//  manager_address _4=2
+    format_internal_address INLINECALLDICT	//  manager_address memorized_address
+    set_state CALLDICT
+    3 PUSHINT	//  _8=3
+    format_internal_address INLINECALLDICT	//  sender_address
+    4 PUSHINT	//  sender_address _11=4
+    NEWC	//  sender_address _11=4 _12
+    4 STU	//  sender_address _14
+    SWAP	//  _14 sender_address
+    STSLICER	//  _15
+    ENDC	//  in_msg_full
+    1 PUSHINT	//  in_msg_full _18=1
+    12345 PUSHINT	//  in_msg_full _18=1 _19=12345
+    2 PUSHINT	//  in_msg_full _18=1 _19=12345 _20=2
+    NEWC	//  in_msg_full _18=1 _19=12345 _20=2 _21
+    32 STU	//  in_msg_full _18=1 _19=12345 _23
+    64 STU	//  in_msg_full _18=1 _25
+    1 STU	//  in_msg_full _27
+    ENDC	//  in_msg_full in_msg_body
+    CONT:<{
+      recv_internal CALLDICT
+    }>	//  in_msg_full in_msg_body _30
+    12345 PUSHINT	//  in_msg_full in_msg_body _30 _32=12345
+    10 PUSHINT	//  in_msg_full in_msg_body _30 _32=12345 _33=10
+    s0 s3 XCHG	//  in_msg_full _33=10 _30 _32=12345 in_msg_body
+    CTOS	//  in_msg_full _33=10 _30 _32=12345 _34
+    s3 s3 s0 XCHG3
+    s1 s4 XCHG	//  _30 _32=12345 _33=10 in_msg_full _34
+    4 TUPLE	//  _30 _31
+    invoke_method_expect_fail CALLDICT	//  gas_used
   }>
 }END>c
