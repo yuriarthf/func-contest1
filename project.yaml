@@ -13,3 +13,8 @@
     - func/3.fc
   tests:
     - tests/3.fc
+4:
+  func:
+    - func/4.fc
+  tests:
+    - tests/4.fc

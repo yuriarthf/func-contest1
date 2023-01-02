@@ -1,0 +1,69 @@
+int NOW() asm "12345 PUSHINT";
+int KEY() asm "1 PUSHINT";
+
+int __test_op_1() {
+  set_now(NOW());
+
+  int key = KEY();
+  int expected_value = 12345;
+  int expected_valid_until = NOW();
+  cell in_msg_body = begin_cell()
+      .store_uint(1, 32)
+      .store_uint(12345, 64)
+      .store_uint(key, 256)
+      .store_uint(expected_valid_until, 64)
+      .store_uint(expected_value, 64)
+    .end_cell();
+
+  (int gas_used1, _) = invoke_method(recv_internal, [
+    12345, 10, null(), in_msg_body.begin_parse()
+  ]);
+
+  (cell data_dict, cell valid_until_dict) = load_data();
+  (slice value, _) = data_dict.udict_get?(256, key);
+  (slice valid_until, _) = valid_until_dict.udict_get?(256, key);
+  throw_unless(100, value~load_uint(64) == expected_value);
+  throw_unless(101, valid_until~load_uint(64) == expected_valid_until);
+
+  var (int gas_used2, stack) = invoke_method(get_key, [key]);
+  [int valid_until_int, slice value_slice] = stack;
+  throw_unless(102, valid_until_int = expected_valid_until);
+  throw_unless(103, value_slice~load_uint(64) == expected_value);
+
+  return gas_used1 + gas_used2;
+}
+
+int __test_op_2() {
+  set_now(NOW() + 1);
+
+  cell prev_data = get_prev_c4();
+  set_data(prev_data);
+
+  int key = KEY();
+  cell in_msg_body = begin_cell()
+      .store_uint(2, 32)
+      .store_uint(12345, 64)
+    .end_cell();
+
+  (int gas_used1, _) = invoke_method(recv_internal, [
+    12345, 10, null(), in_msg_body.begin_parse()
+  ]);
+
+  int gas_used2 = invoke_method_expect_fail(get_key, [key]);
+
+  return gas_used1 + gas_used2;
+}
+
+int __test_op_3() {
+  int key = KEY();
+  cell in_msg_body = begin_cell()
+      .store_uint(3, 32)
+      .store_uint(12345, 64)
+    .end_cell();
+
+  int gas_used = invoke_method_expect_fail(recv_internal, [
+    12345, 10, null(), in_msg_body.begin_parse()
+  ]);
+
+  return gas_used;
+}
