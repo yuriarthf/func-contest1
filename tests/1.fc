@@ -3,36 +3,36 @@
 }
 
 int __test_increment_counter() {
-	set_default_initial_data();
-	cell message = begin_cell()
-		.store_uint(10, 32)
-		.end_cell();
-	var (int gas_used1, _) = invoke_method(
-		recv_internal,
-		[message.begin_parse()]
-	);
-	var (int gas_used2, stack) = invoke_method(
-		get_total,
-		[]
-	);
+  set_default_initial_data();
+  cell message = begin_cell()
+      .store_uint(10, 32)
+    .end_cell();
+  var (int gas_used1, _) = invoke_method(
+    recv_internal,
+    [message.begin_parse()]
+  );
+  var (int gas_used2, stack) = invoke_method(
+    get_total,
+    []
+  );
 
-	[int total] = stack;
-	throw_if(100, total != 10); 
+  [int total] = stack;
+  throw_if(100, total != 10); 
 
-	return gas_used1 + gas_used2;
+return gas_used1 + gas_used2;
 }
 
 int __test_increment_counter_fail() {
-	set_default_initial_data();
-	cell message = begin_cell()
-		.store_uint(10, 31)
-		.end_cell();
+  set_default_initial_data();
+  cell message = begin_cell()
+      .store_uint(10, 31)
+    .end_cell();
 
-	var gas_used1 = invoke_method_expect_fail(recv_internal, [message.begin_parse()]);
+  var gas_used1 = invoke_method_expect_fail(recv_internal, [message.begin_parse()]);
 
-	var (int gas_used2, stack) = invoke_method(get_total, []);
-	[int total] = stack;
-	throw_if(101, total != 0);
+  var (int gas_used2, stack) = invoke_method(get_total, []);
+  [int total] = stack;
+  throw_if(101, total != 0);
 
-	return gas_used1 + gas_used2;
+  return gas_used1 + gas_used2;
 }

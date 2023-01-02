@@ -1,0 +1,64 @@
+slice get_owner_addr() inline {
+	;;; addr_std$10 anycast:(Maybe Anycast) workchain_id:int8 address:bits256  = MsgAddressInt;
+	return begin_cell()
+      .store_uint(2, 2) ;; addr_std$10
+      .store_uint(0, 1) ;; anycast:(Maybe Anycast)
+      .store_uint(0, 8) ;; workchain_id:int8
+      .store_uint(1, 256) ;; address:bits256
+    .end_cell()
+    .begin_parse();
+}
+
+() set_owner_addr(slice owner_addr) impure {
+  set_data(begin_cell().store_slice(owner_addr).end_cell());
+}
+
+int __test_fwd_message() {
+  slice owner_addr = get_owner_addr();
+  slice sender_addr = get_owner_addr();
+
+  set_owner_addr(owner_addr);
+
+  cell in_msg_body = begin_cell()
+      .store_uint(10, 4) ;; 1010
+    .end_cell();
+  
+  cell in_msg_full = begin_cell()
+      .store_uint(0x6, 4) ;; 0110
+      .store_slice(sender_addr)
+    .end_cell();
+  
+  var (int gas_used, _) = invoke_method(
+    recv_internal,
+    [12345, 10, in_msg_full, in_msg_body.begin_parse()]
+  );
+
+  slice actions = get_actions();
+  actions~load_ref();
+
+  int prefix = actions~load_uint(32);
+  throw_unless(100, prefix == 0x0ec3c86d);
+
+  int flag = actions~load_uint(8);
+  throw_unless(101, flag == 64);
+
+  cell msg = actions~load_ref();
+  slice cs = msg.begin_parse();
+  cs~skip_bits(6);
+
+  slice dest_addr = cs~load_msg_addr();
+  throw_unless(102, equal_slices(dest_addr, owner_addr));
+
+  cs~load_grams();
+
+  cs~skip_bits(1 + 4 + 4 + 64 + 32 + 1 + 1);
+
+  slice sender_addr = cs~load_msg_addr();
+  throw_unless(103, equal_slices(sender_addr, sender_addr));
+
+  slice fwd_msg_body = (cs~load_ref()).begin_parse();
+  int fwd_msg_value = fwd_msg_body~load_uint(4);
+  throw_unless(104, fwd_msg_value == 10);
+
+  return gas_used;
+}
