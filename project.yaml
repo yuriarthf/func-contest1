@@ -18,3 +18,6 @@
     - func/4.fc
   tests:
     - tests/4.fc
+5:
+  func:
+    - func/5.fc
